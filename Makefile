@@ -21,6 +21,6 @@ testlib: $(SRC)
 tests: testlib
 	$(foreach test, $(TSTS), gcc $(test) -o $(TST)/bin/$(test).bin
 clean:
-	find . -name '*.o' | xargs rm
-	find . -name '*.out' | xargs rm
-	find . -name '*.a' | xargs rm
+	find ./ -iname "*.a" -exec rm {} \;
+	find ./ -iname "*.o" -exec rm {} \;
+	find ./ -iname "*.out" -exec rm {} \;

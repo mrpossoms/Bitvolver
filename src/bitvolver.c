@@ -24,20 +24,47 @@ void __binary_mutation(Bitvolver* bv, void* src, void* dst){
 	
 }
 
+char* __get_member(void* generation, int i, int size){
+	return ((char*)generation) + i * size;
+}
+
 void* __evolve(void* params){
 	EvoArgs args = *((EvoArgs*)params);
 	Bitvolver* bv = args.bv;
 	int size = bv->MemberSize;
 	int i = 0;
 
+	void* best = NULL;
+	int bestIndex = -1;
+	float fitness = 0;
+
+	/* find the most fit member */
+	for(i = args.start; i < args.end; i++){
+		char* member = __get_member(bv->Generation, i, size);
+		float f = bv->Fitness((void*)member);
+
+		if(f > fitness){
+			bestIndex = i;
+			best = (void*)member;
+		}
+	}
+
+	/* Copy the most effiecent member over the others */
+	for(i = args.start; i < args.end; i++){
+		if(i != bestIndex){
+			char* mem = __get_member(bv->Generation, i, size);
+			memcpy((void*)mem, best, size);
+		}
+	}
+
 	/* Mutate */
 	for(i = args.start; i < args.end; i++){
-		char* member = ((char*)bv->Generation) + i * size;
-		bv->Mutate(bv, (void*)member, (void*)member);
+		if(i != best){
+			char* member = ((char*)bv->Generation) + i * size;
+			bv->Mutate(bv, (void*)member, (void*)member);
+		}
 	}
 	
-	
-
 	return NULL;
 }
 
@@ -77,14 +104,20 @@ int bitvolver_run(Bitvolver* bv, int threads, int generations){
 	void** returns = (void**)malloc(sizeof(void*) * threads);
 	EvoArgs* args = (EvoArgs*)malloc(sizeof(EvoArgs) * threads);	
 
+	printf("Mem allocated!\n");
+
 	for(j = 0; j < generations; j++){
+		printf("Generation %d\n", j);
 		for(i = threads; i--;){
 			pthread_create(&trds[i], NULL, __evolve, &args[i]);
 		}
+		printf("Threads started\n");
 		/* Join up on all the threads */
 		for(i = threads; i--;){
 			pthread_join(trds[i], &returns[i]);
+			printf("Thread %d joined\n", i);
 		}
+		printf("Threads finished\n");
 	}
 
 	free(trds); /* clean up old threads */

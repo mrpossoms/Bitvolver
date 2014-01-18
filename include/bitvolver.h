@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <math.h>
 #include <strings.h>
+#include <string.h>
 
 /***
  *       _____ _                   _       
