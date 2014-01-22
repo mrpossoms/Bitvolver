@@ -54,6 +54,20 @@ int __partition(Bitvolver* bv, void* tmpMem, int left, int right, int p){
 	return si;
 }
 
+int __quickSort(Bitvolver* bv, int left, int right){
+	if(left < right){
+		int p = (random() % (right - left - 2)) + left + 1;
+		void* tmpMem = malloc(bv->MemberSize); // temp generation member
+
+		p = __partition(bv, tmpMem, left, right, p);
+
+		__quickSort(bv, left, p - 1);
+		__quickSort(bv, p + 1, right);
+
+		free(tmpMem); // clean up temp generation member
+	}
+}
+
 void* __evolve(void* params){
 	//printf("evolve entered\n");
 	EvoArgs args = *((EvoArgs*)params);
