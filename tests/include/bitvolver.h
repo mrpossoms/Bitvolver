@@ -19,7 +19,8 @@
  */
 struct __bitvolver;
 typedef struct{
-	void* Generation;
+	void*  Generation;
+	float* Fitnesses;
 	int   MemberCount;
 	int   MemberSize;
 

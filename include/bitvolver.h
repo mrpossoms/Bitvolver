@@ -22,6 +22,7 @@ struct __bitvolver;
 typedef struct __bitvolver Bitvolver;
 struct __bitvolver{
 	void* Generation;
+	float* Fitnesses;
 	int   MemberCount;
 	int   MemberSize;
 

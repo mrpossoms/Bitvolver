@@ -2,7 +2,7 @@ FLAGS=-Wint-to-pointer-cast
 SRC=./src/*.c
 INC=./include
 DST=./lib
-LINK=-pthread
+LINK=-pthread -string
 LIB=libbitvolver.a
 
 TSTINC=./tests/include

@@ -2,6 +2,12 @@
 
 #define RAND8() (random() % 0xFF)\
 
+#define SWAP(arr, t, i, j, size){\
+	memcpy(t, &arr[i], size);\
+	memcpy(&arr[i], &arr[j], size);\
+	memcpy(&arr[j], t, size);\
+}\
+
 typedef struct{
 	Bitvolver* bv;
 	int start;
@@ -28,15 +34,41 @@ char* __get_member(void* generation, int i, int size){
 	return ((char*)generation) + i * size;
 }
 
+int __partition(Bitvolver* bv, void* tmpMem, int left, int right, int p){
+	float pv = bv->Fitnesses[p];
+	float t = 0;
+	int i, si = left;
+
+	SWAP(bv->Fitnesses, &t, p, right, sizeof(float));
+	SWAP(bv->Generation, tmpMem, p, right, bv->MemberSize);
+
+	for(i = left; i < right; i++){
+		if(bv->Fitnesses[i] < pv){
+				SWAP(bv->Fitnesses, &t, i, si, sizeof(float));
+				SWAP(bv->Generation, tmpMem, i, si, bv->MemberSize);
+		}
+	}
+	SWAP(bv->Fitnesses, &t, right, si, sizeof(float));
+	SWAP(bv->Generation, tmpMem, right, si, bv->MemberSize);
+
+	return si;
+}
+
 void* __evolve(void* params){
+	//printf("evolve entered\n");
 	EvoArgs args = *((EvoArgs*)params);
+	//printf("cast %d %d\n", args.start, args.end);
 	Bitvolver* bv = args.bv;
 	int size = bv->MemberSize;
+	//printf("reterieved\n");
 	int i = 0;
 
 	void* best = NULL;
 	int bestIndex = -1;
 	float fitness = 0;
+
+	//printf("Evolve beginning");
+	//printf("%d - %d\n", args.start, args.end);
 
 	/* find the most fit member */
 	for(i = args.start; i < args.end; i++){
@@ -77,6 +109,7 @@ Bitvolver bitvolver_create(
 
 	Bitvolver out = {
 		NULL,
+		NULL,
 		count, /* members */
 		size,  /* member size in bytes */
 		rate,  /* mutation rate */
@@ -86,6 +119,12 @@ Bitvolver bitvolver_create(
 
 	/* try to allocate memory for the generation's members */
 	if(!(out.Generation = malloc(size * count))){
+		bzero(&out, sizeof(Bitvolver));
+		errno = ENOMEM;
+	}
+
+	/* try to allocate memory for the member's fitness values */
+	if(!(out.Fitnesses = malloc(sizeof(float) * count))){
 		bzero(&out, sizeof(Bitvolver));
 		errno = ENOMEM;
 	}
@@ -107,8 +146,13 @@ int bitvolver_run(Bitvolver* bv, int threads, int generations){
 	printf("Mem allocated!\n");
 
 	for(j = 0; j < generations; j++){
+		int ti = 0;
+		int memPerThread = (bv->MemberCount / threads) - 1;
 		printf("Generation %d\n", j);
 		for(i = threads; i--;){
+			args[i].bv = bv;
+			args[i].start = ti; ti += memPerThread;
+			args[i].end = ti;	
 			pthread_create(&trds[i], NULL, __evolve, &args[i]);
 		}
 		printf("Threads started\n");

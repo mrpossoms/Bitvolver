@@ -12,21 +12,24 @@ float fit(void* member){
 	float fit = 0;
 	char* txt = (char*)member;
 	for(i = 0; i < 12; i++){
-		float t = (abs(txt[i] - (int)targ[i]) / 255.0f);
-		printf("S: %c - T: %c fit: %f\n", txt[i], targ[i], t);
-		fit += t;
+		if(targ[i] == txt[i])
+			fit++;
 	}
 
-	fit /= 12;
-	return (1.0f - fit);
+	return fit / 12.0f;
 }
 
 int main(void){
-	
-	Bitvolver bv = bitvolver_create(100, 12, 0.5f, NULL, fit);
+	int i = 0;
+	Bitvolver bv = bitvolver_create(100, 12, 0.25f, NULL, fit);
 	//printf("Fitness %f\n", fit(ntar));
 
-	bitvolver_run(&bv, 1, 1);
+	for(i = 0; i < bv.MemberCount * bv.MemberSize; i++){
+		((char*)bv.Generation)[i] = (char)(random() % 255);
+	}
+
+	bitvolver_run(&bv, 1, 1000);
+	printf("%s", (char*)bv.Generation);
 
 	return 0;
 }
