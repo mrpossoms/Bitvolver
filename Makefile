@@ -2,25 +2,29 @@ FLAGS=-Wint-to-pointer-cast
 SRC=./src/*.c
 INC=./include
 DST=./lib
-LINK=-pthread -string
-LIB=libbitvolver.a
+LINK=-lpthread
+NAME=bitvolver
 
-TSTINC=./tests/include
 TST=./tests
 TSTS=./tests/*.c
+TSTINC=-I$(TST)/include
+TSTLIB=-L$(TST)/lib
 
 all:
+	mkdir -p lib
 	gcc -I$(INC) -c $(SRC)
 	ar rcs $(DST)/libbitvolver.a *.o
 	rm *.o
 testlib: $(SRC)
-	gcc -I$(TSTINC) -c $(SRC)
-	ar rcs $(TST)/lib/$(LIB) *.o
+	gcc $(TSTINC) -c $(SRC)
+	ar rcs $(TST)/lib/lib$(NAME).a *.o
 	rm *.o
 
 tests: testlib
-	$(foreach test, $(TSTS), gcc $(test) -o $(TST)/bin/$(test).bin
+	mkdir -p $(TST)/bin
+	find $(TST) -name "*.c" -exec gcc $(TSTINC) $(TSTLIB) {} -o {}.bin -l$(NAME) $(LINK) \;
 clean:
 	find ./ -iname "*.a" -exec rm {} \;
 	find ./ -iname "*.o" -exec rm {} \;
 	find ./ -iname "*.out" -exec rm {} \;
+	find ./ -iname "*.bin" -exec rm {} \;
