@@ -1,6 +1,8 @@
 #include "bitvolver.h"
+#include <unistd.h>
+#include <stdio.h>
 
-#define RAND8() (random() % 0xFF)\
+#define RAND8() ((unsigned char)(rand() % 255))\
 
 #define SWAP(arr, t, i, j, size){\
 	memcpy(t, &arr[i], size);\
@@ -15,7 +17,8 @@ typedef struct{
 } EvoArgs;
 
 float __randf(){
-	return RAND8() / 255.0f;
+	unsigned char b = RAND8();
+	return b / 255.0f;
 }
 
 void __binary_mutation(Bitvolver* bv, void* src, void* dst){
@@ -26,12 +29,15 @@ void __binary_mutation(Bitvolver* bv, void* src, void* dst){
 		if(__randf() < bv->MutationRate){
 			((char*)dst)[i] = ((char*)src)[i] + RAND8();
 		}
+		else{
+			((char*)dst)[i] = ((char*)src)[i];	
+		}
 	}
 	
 }
 
-char* __get_member(void* generation, int i, int size){
-	return ((char*)generation) + i * size;
+unsigned char* __get_member(void* generation, int i, int size){
+	return ((unsigned char*)generation) + i * size;
 }
 
 int __partition(Bitvolver* bv, void* tmpMem, int left, int right, int p){
@@ -56,7 +62,7 @@ int __partition(Bitvolver* bv, void* tmpMem, int left, int right, int p){
 
 int __quickSort(Bitvolver* bv, int left, int right){
 	if(left < right){
-		int p = (random() % (right - left - 2)) + left + 1;
+		int p = (rand() % (right - left - 2)) + left + 1;
 		void* tmpMem = malloc(bv->MemberSize); // temp generation member
 
 		p = __partition(bv, tmpMem, left, right, p);
@@ -66,6 +72,8 @@ int __quickSort(Bitvolver* bv, int left, int right){
 
 		free(tmpMem); // clean up temp generation member
 	}
+
+	return 0;
 }
 
 void* __evolve(void* params){
@@ -81,36 +89,36 @@ void* __evolve(void* params){
 	int bestIndex = -1;
 	float fitness = 0;
 
-	//printf("Evolve beginning");
-	//printf("%d - %d\n", args.start, args.end);
-
 	/* find the most fit member */
-	for(i = args.start; i < args.end; i++){
-		char* member = __get_member(bv->Generation, i, size);
+	for(i = args.start; i <= args.end; i++){
+		unsigned char* member = __get_member(bv->Generation, i, size);
 		float f = bv->Fitness((void*)member);
-
 		if(f > fitness){
 			bestIndex = i;
+			fitness = f;
 			best = (void*)member;
 		}
 	}
 
+	write(1, best, size);
+	printf("\nMost fit %d @ %0.4f\n\n", bestIndex, fitness);
+
 	/* Copy the most effiecent member over the others */
-	for(i = args.start; i < args.end; i++){
+	for(i = args.start; i <= args.end; i++){
 		if(i != bestIndex){
-			char* mem = __get_member(bv->Generation, i, size);
+			unsigned char* mem = __get_member(bv->Generation, i, size);
 			memcpy((void*)mem, best, size);
 		}
 	}
 
 	/* Mutate */
-	for(i = args.start; i < args.end; i++){
-		if(i != best){
-			char* member = ((char*)bv->Generation) + i * size;
-			bv->Mutate(bv, (void*)member, (void*)member);
+	for(i = args.start; i <= args.end; i++){
+		if(i != bestIndex){
+			unsigned char* member = ((unsigned char*)bv->Generation) + i * size;
+			bv->Mutate((struct __bitvolver*)bv, (void*)member, (void*)member);
 		}
 	}
-	
+
 	return NULL;
 }
 
@@ -122,14 +130,17 @@ Bitvolver bitvolver_create(
 	float (*fitness)(void*)){
 
 	Bitvolver out = {
-		NULL,
-		NULL,
-		count, /* members */
-		size,  /* member size in bytes */
-		rate,  /* mutation rate */
-		mutate == NULL ? __binary_mutation : mutate,
-		fitness
+		.Generation   = NULL,
+		.Fitnesses    = NULL,
+		.MemberCount  = count, /* members */
+		.MemberSize   = size,  /* member size in bytes */
+		.MutationRate = rate,  /* mutation rate */
+		.Mutate  = mutate == NULL ? __binary_mutation : mutate,
+		.Fitness = fitness /* fitness calculation function */
 	};
+
+	/* seed the rng */
+	srand(((unsigned int)time(NULL)) % 1024);
 
 	/* try to allocate memory for the generation's members */
 	if(!(out.Generation = malloc(size * count))){
@@ -157,7 +168,7 @@ int bitvolver_run(Bitvolver* bv, int threads, int generations){
 	void** returns = (void**)malloc(sizeof(void*) * threads);
 	EvoArgs* args = (EvoArgs*)malloc(sizeof(EvoArgs) * threads);	
 
-	printf("Mem allocated!\n");
+	//printf("Mem allocated!\n");
 
 	for(j = 0; j < generations; j++){
 		int ti = 0;
@@ -166,16 +177,17 @@ int bitvolver_run(Bitvolver* bv, int threads, int generations){
 		for(i = threads; i--;){
 			args[i].bv = bv;
 			args[i].start = ti; ti += memPerThread;
-			args[i].end = ti;	
+			args[i].end = ti;
+			//printf("Thread %d (%d-%d)\n", i, args[i].start, args[i].end);	
 			pthread_create(&trds[i], NULL, __evolve, &args[i]);
 		}
-		printf("Threads started\n");
+		//printf("Threads started\n");
 		/* Join up on all the threads */
 		for(i = threads; i--;){
 			pthread_join(trds[i], &returns[i]);
-			printf("Thread %d joined\n", i);
+			//printf("Thread %d joined\n", i);
 		}
-		printf("Threads finished\n");
+		//printf("Threads finished\n");
 	}
 
 	free(trds); /* clean up old threads */

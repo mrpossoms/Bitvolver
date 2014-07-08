@@ -5,31 +5,38 @@
 #define I "INSPECT"
 
 char targ[] = "Hello World!";
-char ntar[] = "Bello Borld!";
+char ntar[] = "Pizza World!";
 
 float fit(void* member){
 	int i = 0;
 	float fit = 0;
 	char* txt = (char*)member;
-	for(i = 0; i < 12; i++){
+	for(i = 0; i < 13; i++){
 		if(targ[i] == txt[i])
 			fit++;
 	}
-
-	return fit / 12.0f;
+	return fit / 13.0f;
 }
 
 int main(void){
 	int i = 0;
-	Bitvolver bv = bitvolver_create(100, 12, 0.25f, NULL, fit);
-	//printf("Fitness %f\n", fit(ntar));
+	char dst[13] = {0};
+
+	Bitvolver bv = bitvolver_create(100, 13, 0.125f, NULL, fit);
+	printf("%d Fitness %s %f\n", rand(), ntar, fit(ntar));
+	__binary_mutation(&bv, ntar, dst);
+	printf("Fitness %s %f\n", dst, fit(dst));
+
+	printf("%f\n", __randf());
 
 	for(i = 0; i < bv.MemberCount * bv.MemberSize; i++){
-		((char*)bv.Generation)[i] = (char)(random() % 255);
+		((char*)bv.Generation)[i] = 32 + (RAND8() % 122);
 	}
+	//memcpy(bv.Generation, ntar, 13);
+	printf("First member %s", (char*)__get_member(bv.Generation, 0, 13));
 
-	bitvolver_run(&bv, 1, 1000);
-	printf("%s", (char*)bv.Generation);
+	bitvolver_run(&bv, 1, 100);
+
 
 	return 0;
 }

@@ -7,6 +7,8 @@
 #include <math.h>
 #include <strings.h>
 
+#define RAND8() ((unsigned char)(rand() % 255))\
+
 /***
  *       _____ _                   _       
  *      / ____| |                 | |      
@@ -41,8 +43,8 @@ typedef struct{
  *                                                  
  */
 float __randf();
-
 void __binary_mutation(Bitvolver*, void*, void*);
+unsigned char* __get_member(void*, int, int);
 
 Bitvolver bitvolver_create(
 	int   count,
